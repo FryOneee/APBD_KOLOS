@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
-using APBD_KOLOS_2.Models;
-using APBD_KOLOS_2.Models.DTOs;
+using APBD_KOLOS.Models;
+using APBD_KOLOS.Models.DTOs;
 
-namespace APBD_KOLOS_2.Services
+namespace APBD_KOLOS.Services
 {
     public class RentService : IRentService
     {
@@ -43,6 +43,7 @@ from Customer c
  inner join Movie m on m.movie_id=ri.movie_id
  where c.customer_id=@customerId";
 
+                
                 await using var conn = new SqlConnection(_cs);
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@CustomerId", customerId);
@@ -80,10 +81,11 @@ from Customer c
                             status = reader.GetString(reader.GetOrdinal("name")),
                             movies = new List<MovieDTO>()
                         };
+                        rental.rentals.Add(rentalDto);
+
 
                     }
 
-                    rental.rentals.Add(rentalDto);
 
                     rentalDto.movies.Add(new MovieDTO
                     {

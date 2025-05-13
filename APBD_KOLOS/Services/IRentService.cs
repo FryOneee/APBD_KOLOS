@@ -1,6 +1,6 @@
-using APBD_KOLOS_2.Models.DTOs;
+using APBD_KOLOS.Models.DTOs;
 
-namespace APBD_KOLOS_2.Services
+namespace APBD_KOLOS.Services
 {
     public interface IRentService
     {

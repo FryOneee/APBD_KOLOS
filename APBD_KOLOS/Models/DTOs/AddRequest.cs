@@ -1,4 +1,4 @@
-namespace APBD_KOLOS_2.Models.DTOs;
+namespace APBD_KOLOS.Models.DTOs;
 
 public class AddRequest
 {

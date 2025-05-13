@@ -2,16 +2,16 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using APBD_KOLOS_2.Models;
-using APBD_KOLOS_2.Models.DTOs;
-using APBD_KOLOS_2.Services;
+using APBD_KOLOS.Models;
+using APBD_KOLOS.Models.DTOs;
+using APBD_KOLOS.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
 
-namespace APBD_KOLOS_2.Controllers
+namespace APBD_KOLOS.Controllers
 {
-    [Route("api/consumers")]
+    [Route("api/customers")]
     [ApiController]
     public class RentController : ControllerBase
     {
