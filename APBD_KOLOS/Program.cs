@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddScoped<IRentService, RentService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -34,100 +34,120 @@ static void InitializeDatabase()
         "Encrypt=False;" +
         "TrustServerCertificate=True;";
 
-    const string createDbScript = @"
-IF DB_ID('APBD8_2') IS NULL
+    const string dropDbScript = @"
+IF DB_ID('APBD8_2') IS NOT NULL
 BEGIN
-    CREATE DATABASE APBD8_2;
-END;";
+    ALTER DATABASE APBD8_2 SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE APBD8_2;
+END;
+";
 
-    const string schemaScript = @"
-DROP TABLE IF EXISTS dbo.Rental_Item;
-DROP TABLE IF EXISTS dbo.Rental;
-DROP TABLE IF EXISTS dbo.Status;
-DROP TABLE IF EXISTS dbo.Movie;
-DROP TABLE IF EXISTS dbo.Customer;
+    const string createDbScript = @"
+CREATE DATABASE APBD8_2;
+";
+
+    const string schemaAndSeedScript = @"
+DROP TABLE IF EXISTS dbo.Booking_Attraction;
+DROP TABLE IF EXISTS dbo.Booking;
+DROP TABLE IF EXISTS dbo.Attraction;
+DROP TABLE IF EXISTS dbo.Employee;
+DROP TABLE IF EXISTS dbo.Guest;
 
 -- Create tables
-CREATE TABLE dbo.Customer (
-    customer_id INT NOT NULL PRIMARY KEY,
+CREATE TABLE dbo.Attraction (
+    attraction_id INT NOT NULL PRIMARY KEY,
+    name NVARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL
+);
+
+CREATE TABLE dbo.Booking (
+    booking_id INT NOT NULL PRIMARY KEY,
+    guest_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    date DATETIME NOT NULL
+);
+
+CREATE TABLE dbo.Booking_Attraction (
+    booking_id INT NOT NULL,
+    attraction_id INT NOT NULL,
+    amount INT NOT NULL,
+    PRIMARY KEY (booking_id, attraction_id)
+);
+
+CREATE TABLE dbo.Employee (
+    employee_id INT NOT NULL PRIMARY KEY,
     first_name NVARCHAR(100) NOT NULL,
-    last_name  NVARCHAR(200) NOT NULL
+    last_name NVARCHAR(100) NOT NULL,
+    employee_number NVARCHAR(22) NOT NULL
 );
 
-CREATE TABLE dbo.Movie (
-    movie_id     INT NOT NULL PRIMARY KEY,
-    title        NVARCHAR(200) NOT NULL,
-    release_date DATETIME NOT NULL,
-    price_per_day DECIMAL(10,2) NOT NULL
-);
-
-CREATE TABLE dbo.Status (
-    status_id INT NOT NULL PRIMARY KEY,
-    name      NVARCHAR(200) NOT NULL
-);
-
-CREATE TABLE dbo.Rental (
-    rental_id   INT NOT NULL PRIMARY KEY,
-    rental_date DATETIME NOT NULL,
-    return_date DATETIME NULL,
-    customer_id INT NOT NULL,
-    status_id   INT NOT NULL
-);
-
-CREATE TABLE dbo.Rental_Item (
-    rental_id        INT NOT NULL,
-    movie_id         INT NOT NULL,
-    price_at_rental  DECIMAL(10,2) NOT NULL,
-    CONSTRAINT PK_Rental_Item PRIMARY KEY (rental_id, movie_id)
+CREATE TABLE dbo.Guest (
+    guest_id INT NOT NULL PRIMARY KEY,
+    first_name NVARCHAR(100) NOT NULL,
+    last_name NVARCHAR(100) NOT NULL,
+    date_of_birth DATETIME NOT NULL
 );
 
 -- Add foreign keys
-ALTER TABLE dbo.Rental
-    ADD CONSTRAINT FK_Rental_Customer FOREIGN KEY (customer_id) REFERENCES dbo.Customer(customer_id),
-        CONSTRAINT FK_Rental_Status   FOREIGN KEY (status_id)   REFERENCES dbo.Status(status_id);
+ALTER TABLE dbo.Booking_Attraction
+    ADD CONSTRAINT FK_Booking_Attraction_Attraction
+    FOREIGN KEY (attraction_id) REFERENCES dbo.Attraction(attraction_id);
 
-ALTER TABLE dbo.Rental_Item
-    ADD CONSTRAINT FK_RentalItem_Rental FOREIGN KEY (rental_id) REFERENCES dbo.Rental(rental_id),
-        CONSTRAINT FK_RentalItem_Movie  FOREIGN KEY (movie_id)  REFERENCES dbo.Movie(movie_id);
+ALTER TABLE dbo.Booking_Attraction
+    ADD CONSTRAINT FK_Booking_Attraction_Booking
+    FOREIGN KEY (booking_id) REFERENCES dbo.Booking(booking_id);
 
--- Seed data
-INSERT INTO dbo.Status (status_id, name) VALUES
-    (1, N'Rented'), (2, N'Returned'), (3, N'Late');
+ALTER TABLE dbo.Booking
+    ADD CONSTRAINT FK_Booking_Employee
+    FOREIGN KEY (employee_id) REFERENCES dbo.Employee(employee_id);
 
-INSERT INTO dbo.Customer (customer_id, first_name, last_name) VALUES
-    (1, N'Alice', N'Johnson'),
-    (2, N'Bob',   N'Smith'),
-    (3, N'Charlie', N'Davis');
+ALTER TABLE dbo.Booking
+    ADD CONSTRAINT FK_Booking_Guest
+    FOREIGN KEY (guest_id) REFERENCES dbo.Guest(guest_id);
 
-INSERT INTO dbo.Movie (movie_id, title, release_date, price_per_day) VALUES
-    (1, N'Inception',       '2010-07-16', 3.99),
-    (2, N'The Matrix',      '1999-03-31', 2.99),
-    (3, N'Interstellar',    '2014-11-07', 4.49),
-    (4, N'The Godfather',   '1972-03-24', 2.49),
-    (5, N'Avengers: Endgame','2019-04-26',4.99);
+-- Seed data: Attractions
+INSERT INTO dbo.Attraction (attraction_id, name, price) VALUES
+    (1, 'Roller Coaster', 15.00),
+    (2, 'Ferris Wheel', 10.00),
+    (3, 'Haunted House', 12.50),
+    (4, 'Water Slide', 8.00);
 
-INSERT INTO dbo.Rental (rental_id, rental_date, return_date, customer_id, status_id) VALUES
-    (1001, '2025-04-25T10:00:00', '2025-04-28T15:30:00', 1, 2),
-    (1002, '2025-05-01T14:00:00', NULL,                 2, 1),
-    (1003, '2025-04-30T18:45:00', '2025-05-03T10:00:00', 3, 2),
-    (1004, '2025-05-03T12:15:00', NULL,                 1, 1);
+-- Seed data: Employees
+INSERT INTO dbo.Employee (employee_id, first_name, last_name, employee_number) VALUES
+    (1, 'Alice', 'Johnson', 'EMP001'),
+    (2, 'Bob', 'Smith', 'EMP002'),
+    (3, 'Carol', 'Taylor', 'EMP003');
 
-INSERT INTO dbo.Rental_Item (rental_id, movie_id, price_at_rental) VALUES
-    (1001, 1, 3.99),
-    (1001, 2, 2.99),
-    (1002, 3, 4.49),
-    (1003, 4, 2.49),
-    (1004, 5, 4.99);
+-- Seed data: Guests
+INSERT INTO dbo.Guest (guest_id, first_name, last_name, date_of_birth) VALUES
+    (1, 'John', 'Doe', '1990-05-15'),
+    (2, 'Emma', 'Wilson', '1985-08-20'),
+    (3, 'Liam', 'Brown', '2000-12-01');
 
+-- Seed data: Bookings
+INSERT INTO dbo.Booking (booking_id, guest_id, employee_id, date) VALUES
+    (1, 1, 1, '2024-07-01 10:00:00'),
+    (2, 2, 2, '2024-07-01 11:00:00'),
+    (3, 3, 1, '2024-07-02 09:30:00');
+
+-- Seed data: Booking_Attraction
+INSERT INTO dbo.Booking_Attraction (booking_id, attraction_id, amount) VALUES
+    (1, 1, 2),
+    (1, 2, 1),
+    (2, 3, 3),
+    (3, 4, 2);
 ";
 
     using var conn = new SqlConnection(_csMaster);
     conn.Open();
+
+    using (var cmd = new SqlCommand(dropDbScript, conn))
+        cmd.ExecuteNonQuery();
     using (var cmd = new SqlCommand(createDbScript, conn))
         cmd.ExecuteNonQuery();
 
     conn.ChangeDatabase("APBD8_2");
 
-    using (var cmd = new SqlCommand(schemaScript, conn))
+    using (var cmd = new SqlCommand(schemaAndSeedScript, conn))
         cmd.ExecuteNonQuery();
 }

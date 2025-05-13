@@ -11,20 +11,20 @@ using Microsoft.Data.SqlClient;
 
 namespace APBD_KOLOS.Controllers
 {
-    [Route("api/customers")]
+    [Route("api/bookings")]
     [ApiController]
-    public class RentController : ControllerBase
+    public class BookingController : ControllerBase
     {
-        private readonly IRentService _rentService;
-        public RentController(IRentService rentService)
-            => _rentService = rentService;
+        private readonly IBookingService _bookingService;
+        public BookingController(IBookingService bookingService)
+            => _bookingService = bookingService;
 
-        [HttpGet("{id}/rentals")]
-        public async Task<IActionResult> getRent(int id)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> getBooking(int id)
         {
             try
             {
-                var rents = await _rentService.getRental(id);
+                var rents = await _bookingService.GetBookingFromId(id);
                 return Ok(rents);
             }
             catch (ArgumentException ex)
@@ -49,12 +49,12 @@ namespace APBD_KOLOS.Controllers
             }
         }
         
-        [HttpPost("{id}/rentals")]
-        public async Task<IActionResult> addRental(int id,AddRequest request)
+        [HttpPost]
+        public async Task<IActionResult> addReservation(AddResevationReques request)
         {
             try
             {
-                var rents = await _rentService.addRental(id,request);
+                var rents = await _bookingService.AddRezervation(request);
                 return Ok(rents);
             }
             catch (ArgumentException ex)
