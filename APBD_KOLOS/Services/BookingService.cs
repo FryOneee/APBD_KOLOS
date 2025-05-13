@@ -92,6 +92,7 @@ WHERE b.booking_id = @booking_id;
 
             try
             {
+                int employee_number;
                 using (var cmd = new SqlCommand(
                            "SELECT COUNT(1) FROM Employee WHERE employee_number = @employee_number",
                            conn, tx))
@@ -111,18 +112,30 @@ WHERE b.booking_id = @booking_id;
                     if (!exists)
                         throw new KeyNotFoundException("Guest doesn't exist.");
                 }
+                
+                using (var cmd = new SqlCommand(
+                           "SELECT employee_id FROM Employee WHERE employee_number = @employee_number",
+                           conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@employee_number", request.employeeNumber);
+                    var exists = (string)await cmd.ExecuteScalarAsync();
+                    employee_number=exists?.Length??0;
+                    if (exists.Length==0)
+                        throw new KeyNotFoundException("Guest doesn't exist.");
+                }
+
 
                 int newBookingId;
                 using (var cmd = new SqlCommand(
                            @"
 INSERT INTO Booking (guest_id, employee_id, date)
 VALUES (@guest_id, @employee_id, @date);
-SELECT CAST(SCOPE_IDENTITY() AS int);
+
 ",
                            conn, tx))
                 {
                     cmd.Parameters.AddWithValue("@guest_id",   request.guestId);
-                    cmd.Parameters.AddWithValue("@employee_id", request.employeeNumber);
+                    cmd.Parameters.AddWithValue("@employee_id", employee_number);
                     cmd.Parameters.AddWithValue("@date",        DateTime.UtcNow);
 
                     newBookingId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
